@@ -1,0 +1,332 @@
+<!doctype html> 
+<html>
+<head>
+<meta charset="utf-8">
+<title>Optimal PM Interval</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+body {
+ background:#fff; 
+ color:#000;
+ font-family:system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+ margin:20px;
+}
+
+/*====== CARDS ======*/
+.card {
+ background:#fff;
+ border:1px solid #0B1C36;
+ border-radius:10px;
+ padding:0;
+ margin-bottom:16px;
+ overflow:hidden;
+}
+
+/*===== HEADER BRANDING =====*/
+.card h3 {
+ margin:0;
+ padding:14px 18px;
+ background:#0B1C36;
+ color:#C2965B;
+ font-weight:700;
+ font-size:17px;
+}
+
+/* Content padding inside card */
+.card > *:not(h3) {
+ padding:22px;
+}
+
+/*====== INPUTS ======*/
+input {
+ width:100%;
+ padding:10px 14px;
+ border-radius:8px;
+ border:1px solid #0B1C36;
+ margin-bottom:14px;
+ font-size:15px;
+ box-sizing:border-box;
+}
+
+label {
+ font-size:13px;
+ font-weight:600;
+ margin-top:8px;
+ margin-bottom:6px;
+ display:block;
+ color:#0B1C36;
+}
+
+/*====== BUTTONS (NO BOLD) ======*/
+button {
+ background:#C2965B;
+ color:#0B1C36;
+ border:1px solid #0B1C36;
+ border-radius:8px;
+ padding:8px 14px;
+ cursor:pointer;
+ margin-top:6px;
+ margin-right:6px;
+ font-size:14px;
+ font-weight:400;  /* <<<<< NO BOLD */
+}
+
+button:hover {
+ opacity:0.85;
+}
+
+/*====== GRID ======*/
+.grid {
+ display:grid;
+ grid-template-columns:350px 1fr;
+ gap:22px;
+}
+
+/*====== CHARTS ======*/
+canvas {
+ background:#fff;
+ border:1px solid #0B1C36;
+ border-radius:10px;
+ max-height:280px!important;
+}
+
+/*====== SUMMARY CARDS ======*/
+.summary-grid {
+ display:flex; 
+ gap:12px; 
+ margin-bottom:18px;
+}
+
+.summary-card {
+ background:#fff; 
+ border:1px solid #0B1C36;
+ border-radius:8px; 
+ padding:12px;
+ text-align:center; 
+ flex:1;
+}
+
+.summary-label { 
+ font-size:12px; 
+ font-weight:600; 
+ color:#0B1C36; 
+}
+
+.summary-value { 
+ font-size:18px; 
+ font-weight:700; 
+ margin-top:4px; 
+ color:#000;
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="grid">
+<div class="card">
+
+<h3>Data Entry</h3>
+
+<div>
+
+<label>Weibull β</label><input id="beta" type="number" value="2.0" step="0.01">
+<label>Weibull η (hrs)</label><input id="eta" type="number" value="500">
+
+<label>Unplanned Cost ($/hr)</label><input id="c_unplanned" type="number" value="20000">
+<label>Planned Cost ($/hr)</label><input id="c_planned" type="number" value="5000">
+<label>Unplanned Downtime (hrs)</label><input id="downtime_unplanned" type="number" value="6">
+<label>Planned Downtime (hrs)</label><input id="duration_planned" type="number" value="3">
+
+<label>Simulation Period (hrs)</label><input id="horizon" type="number" value="5000">
+<label>Monte-Carlo Simulations</label><input id="reps" type="number" value="1000">
+<label>Frequency Evaluation Points</label><input id="grid" type="number" value="40">
+
+<button id="run">Run Simulation</button>
+<button id="downloadCharts">Download Charts</button>
+
+</div>
+</div>
+
+<div>
+
+<!-- Summary Cards -->
+<div id="summaryCards" class="summary-grid">
+ <div class="summary-card"><div class="summary-label">Optimal Planned Changeout Interval</div><div id="sumInterval" class="summary-value">-</div></div>
+ <div class="summary-card"><div class="summary-label">Total Cost</div><div id="sumCost" class="summary-value">-</div></div>
+ <div class="summary-card"><div class="summary-label">Planned Events</div><div id="sumPlanned" class="summary-value">-</div></div>
+ <div class="summary-card"><div class="summary-label">Unplanned Events</div><div id="sumUnplanned" class="summary-value">-</div></div>
+ <div class="summary-card"><div class="summary-label">Availability</div><div id="sumAvail" class="summary-value">-</div></div>
+ <div class="summary-card"><div class="summary-label">Simulation Time</div><div id="sumTime" class="summary-value">-</div></div>
+</div>
+
+<div class="card">
+ <h3>Total Cost vs PM Interval</h3>
+ <canvas id="chartCost"></canvas>
+</div>
+
+<div class="card">
+ <h3>Planned vs Unplanned Cost</h3>
+ <canvas id="chartPUcost"></canvas>
+</div>
+
+<div class="card">
+ <h3>Planned vs Unplanned Events</h3>
+ <canvas id="chartPUevents"></canvas>
+</div>
+
+</div>
+</div>
+
+<!-- EMPTY CHART PLACEHOLDERS ON LOAD -->
+<script>
+let chartCost, chartPUcost, chartPUevents;
+
+window.onload = () => {
+  const emptyData = { labels: [], datasets: [] };
+
+  chartCost = new Chart(document.getElementById("chartCost"), {
+    type: 'line',
+    data: emptyData,
+    options: { plugins:{legend:{display:false}}, scales:{x:{},y:{}} }
+  });
+
+  chartPUcost = new Chart(document.getElementById("chartPUcost"), {
+    type: 'line',
+    data: emptyData,
+    options: { plugins:{legend:{display:false}}, scales:{x:{},y:{}} }
+  });
+
+  chartPUevents = new Chart(document.getElementById("chartPUevents"), {
+    type: 'bar',
+    data: emptyData,
+    options: { plugins:{legend:{display:false}}, scales:{x:{},y:{}} }
+  });
+};
+</script>
+
+<script>
+// Weibull random
+const rand=()=>Math.random();
+const weibull=(b,e)=>{const u=Math.min(Math.max(rand(),1e-12),1-1e-12);return e*Math.pow(-Math.log(1-u),1/b);};
+
+// PM simulation
+function simulate({b,e,h,du,dp,pm}){
+ let t=0,p=0,u=0,d=0;
+ while(t<h){
+   const x=weibull(b,e);
+   if(x<pm){ d+=du; u++; t+=x+du; }
+   else{ d+=dp; p++; t+=pm+dp; }
+ }
+ return{p,u,d};
+}
+
+// Eval
+const evalOne=o=>{
+ let P=0,U=0,D=0;
+ for(let i=0;i<o.reps;i++){
+   const r=simulate({b:o.b,e:o.e,h:o.h,du:o.du,dp:o.dp,pm:o.f});
+   P+=r.p;U+=r.u;D+=r.d;
+ }
+ P/=o.reps;U/=o.reps;D/=o.reps;
+ return{
+  freq:o.f,
+  planned:P, unplanned:U,
+  totalCost:(P*o.cP*o.dp)+(U*o.cU*o.du),
+  plannedCost:P*o.cP*o.dp,
+  unplannedCost:U*o.cU*o.du,
+  availability:1-(D/o.h)
+ };
+};
+
+// Sweep
+function sweep(o){
+ const rows=[]; 
+ const min=o.e*0.1;
+ const max=o.e*3;
+ const step=(max-min)/(o.grid-1);
+ for(let i=0;i<o.grid;i++) rows.push(evalOne({...o,f:min+i*step}));
+ return rows;
+}
+
+// Run button
+run.onclick=()=>{
+ const t0=performance.now();
+ const o={
+  b:+beta.value, e:+eta.value, cU:+c_unplanned.value, cP:+c_planned.value,
+  du:+downtime_unplanned.value, dp:+duration_planned.value,
+  h:+horizon.value, reps:+reps.value, grid:+grid.value
+ };
+
+ const rows=sweep(o);
+ const xMin=Math.min(...rows.map(r=>r.freq)), xMax=Math.max(...rows.map(r=>r.freq));
+ const labels=rows.map(r=>r.freq.toFixed(0));
+
+ chartCost.destroy();
+ chartPUcost.destroy();
+ chartPUevents.destroy();
+
+ chartCost=new Chart(document.getElementById("chartCost"),{
+  type:'line',
+  data:{datasets:[{label:"Total Cost",data:rows.map(r=>({x:r.freq,y:r.totalCost})),borderColor:"#C2965B",backgroundColor:"#C2965B",borderWidth:3}]},
+  options:{scales:{
+   x:{type:'linear',min:xMin,max:xMax,title:{display:true,text:'PM Interval (hrs)',color:'#0B1C36'}},
+   y:{min:0,title:{display:true,text:'Total Cost ($)',color:'#0B1C36'}}
+  }}
+ });
+
+ chartPUcost=new Chart(document.getElementById("chartPUcost"),{
+  type:'line',
+  data:{datasets:[
+   {label:"Planned Cost",data:rows.map(r=>({x:r.freq,y:r.plannedCost})),borderColor:"#22c55e",backgroundColor:"#22c55e",borderWidth:2},
+   {label:"Unplanned Cost",data:rows.map(r=>({x:r.freq,y:r.unplannedCost})),borderColor:"#ef4444",backgroundColor:"#ef4444",borderWidth:2}
+  ]},
+  options:{scales:{
+   x:{type:'linear',min:xMin,max:xMax,title:{display:true,text:'PM Interval (hrs)',color:'#0B1C36'}},
+   y:{min:0,title:{display:true,text:'Cost ($)',color:'#0B1C36'}}
+  }}
+ });
+
+ chartPUevents=new Chart(document.getElementById("chartPUevents"),{
+  type:'bar',
+  data:{labels,datasets:[
+   {label:"Planned",data:rows.map(r=>Number(r.planned)),backgroundColor:"#22c55e",stack:"s"},
+   {label:"Unplanned",data:rows.map(r=>Number(r.unplanned)),backgroundColor:"#ef4444",stack:"s"}
+  ]},
+  options:{scales:{
+   x:{stacked:true,title:{display:true,text:'PM Interval (hrs)',color:'#0B1C36'}},
+   y:{stacked:true,min:0,title:{display:true,text:'Event Count',color:'#0B1C36'}}
+  }}
+ });
+
+ const best=rows.reduce((a,b)=>a.totalCost<b.totalCost?a:b);
+ const dt=(performance.now()-t0).toFixed(0)+" ms";
+
+ sumInterval.textContent = best.freq.toFixed(1)+" hrs";
+ sumCost.textContent     = "$"+best.totalCost.toFixed(0);
+ sumPlanned.textContent  = best.planned.toFixed(2);
+ sumUnplanned.textContent= best.unplanned.toFixed(2);
+ sumAvail.textContent    = (best.availability*100).toFixed(1)+"%";
+ sumTime.textContent     = dt;
+};
+
+// Export charts
+downloadCharts.onclick=()=>{
+ [
+   {c:chartCost,n:"total_cost"},
+   {c:chartPUcost,n:"planned_unplanned_cost"},
+   {c:chartPUevents,n:"events_stacked"}
+ ].forEach(o=>{
+   const a=document.createElement("a");
+   a.href=o.c.toBase64Image();
+   a.download=o.n+".png";
+   a.click();
+ });
+};
+</script>
+
+</body>
+</html>
