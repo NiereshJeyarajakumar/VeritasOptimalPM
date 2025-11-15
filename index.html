@@ -21,7 +21,7 @@ body {
  border-radius:10px;
  padding:0;
  margin-bottom:16px;
- overflow:hidden; /* FIX: prevents header rounding gaps */
+ overflow:hidden;
 }
 
 /*===== HEADER BRANDING =====*/
@@ -32,7 +32,7 @@ body {
  color:#C2965B;
  font-weight:700;
  font-size:17px;
- border-radius:10px 10px 0 0; /* FIX: rounded top corners */
+ border-radius:10px 10px 0 0;
 }
 
 /* Content padding inside card */
@@ -78,12 +78,13 @@ button:hover {
  opacity:0.85;
 }
 
-/*====== SUMMARY CARDS (dashboard-style) ======*/
+/*====== SUMMARY CARDS (centered) ======*/
 .summary-grid {
  display:flex;
  flex-wrap:wrap;
  gap:12px; 
  margin-bottom:18px;
+ justify-content:center; /* CENTERED */
 }
 
 .summary-card {
@@ -113,11 +114,11 @@ button:hover {
  color:#000;
 }
 
-/*====== CHARTS — OPTION A (NO RADIUS) ======*/
+/*====== CHARTS — NO ROUNDING ======*/
 canvas {
  background:#fff;
  border:1px solid #0B1C36;
- border-radius:0; /* FIX: removes top rounding */
+ border-radius:0;
  max-height:280px!important;
  width:100%;
 }
